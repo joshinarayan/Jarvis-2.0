@@ -141,7 +141,15 @@ export function useChat() {
       }
 
       // Save only user + assistant messages (not the injected search context)
-      setMessages(prev => [...prev, { role: 'assistant', content: full }])
+      // Only save if we actually got a response
+      if (full.trim()) {
+        setMessages(prev => [...prev, { role: 'assistant', content: full }])
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: 'Sir, I encountered an issue processing that request. Please try again.' 
+        }])
+      }
     } catch (err) {
       console.error('Chat error:', err)
     } finally {
