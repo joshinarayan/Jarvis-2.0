@@ -78,7 +78,7 @@ function TypingIndicator() {
 }
 
 export default function Home() {
-  const { messages, sendMessage, isLoading, streamingContent, clearChat } = useChat()
+  const { messages, sendMessage, isLoading, streamingContent, clearChat, searchStatus, lastQuery } = useChat()
   const [input,      setInput]      = useState('')
   const [clock,      setClock]      = useState('')
   const [uptime,     setUptime]     = useState('00:00:00')
@@ -182,7 +182,7 @@ export default function Home() {
           <div className="panel p-3 flex-1">
             <p className="text-[8px] tracking-[3px] mb-2" style={{ color:'var(--text-muted)' }}>Active Tools</p>
             <div className="flex flex-wrap gap-1">
-              {([['VOICE', isSupported], ['SEARCH', false], ['FILES', false], ['FACE-ID', false]] as const).map(([label, on]) => (
+              {([['VOICE', isSupported], ['SEARCH', true], ['FILES', false], ['FACE-ID', false]] as const).map(([label, on]) => (
                 <span key={label} className="text-[8px] tracking-[1px] px-2 py-1 border"
                       style={{
                         borderColor: on ? 'var(--cyan)' : 'var(--cyan-dim)',
@@ -216,6 +216,34 @@ export default function Home() {
             )}
             {isLoading && !streamingContent && <TypingIndicator/>}
           </div>
+
+          {/* Search status indicator */}
+          <AnimatePresence>
+            {searchStatus === 'searching' && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-[9px] tracking-[1px] px-2 py-1 border-l-2 flex items-center gap-2"
+                style={{ borderColor: 'var(--amber)', color: 'var(--amber)' }}
+              >
+                <span style={{ animation: 'pulse-dot 1s ease-in-out infinite' }}>◉</span>
+                SEARCHING · {lastQuery}
+              </motion.div>
+            )}
+            {searchStatus === 'done' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="text-[9px] tracking-[1px] px-2 py-1 border-l-2"
+                style={{ borderColor: 'var(--cyan)', color: 'var(--text-muted)' }}
+              >
+                ✓ WEB RESULTS INJECTED
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Voice transcript preview */}
           <AnimatePresence>
