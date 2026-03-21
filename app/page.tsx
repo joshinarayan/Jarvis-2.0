@@ -301,13 +301,16 @@ export default function Home() {
         <footer className="flex items-center justify-between border-t px-1"
                 style={{ gridArea:'bot', borderColor:'var(--border)' }}>
           <div className="flex gap-5">
-            {[['CLEAR', clearChat], ['STOP', stopSpeaking]].map(([label, fn]) => (
-              <button key={label as string} onClick={fn as () => void}
-                      className="text-[8px] tracking-[1.5px] transition-colors hover:opacity-80"
-                      style={{ color:'var(--text-muted)', background:'none', border:'none', cursor:'pointer' }}>
-                [ {label} ]
-              </button>
-            ))}
+            {(['CLEAR', 'STOP'] as const).map((label) => (
+  <button
+    key={label}
+    onClick={label === 'CLEAR' ? clearChat : stopSpeaking}
+    className="text-[8px] tracking-[1.5px] transition-colors hover:opacity-80"
+    style={{ color:'var(--text-muted)', background:'none', border:'none', cursor:'pointer' }}
+  >
+    [ {label} ]
+  </button>
+))}
           </div>
           <span className="font-orbitron text-[10px] tracking-[2px]" style={{ color:'var(--text-muted)' }}>
             {clock}
