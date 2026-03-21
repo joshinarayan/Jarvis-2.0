@@ -83,22 +83,61 @@ export function useChat() {
       const reader  = res.body!.getReader()
       const decoder = new TextDecoder()
       let full = ''
+      let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const lines = decoder.decode(value).split('\n')
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        
+        // Keep last incomplete line in buffer
+        buffer = lines.pop() || ''
+
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.replace('data: ', '').trim()
+          const trimmed = line.trim()
+          if (!trimmed || !trimmed.startsWith('data: ')) continue
+          
+          const data = trimmed.slice(6).trim()
           if (data === '[DONE]') continue
+          if (data === '') continue
+
           try {
-            const delta = JSON.parse(data).choices?.[0]?.delta?.content || ''
+            const parsed = JSON.parse(data)
+            
+            // Handle error from OpenRouter
+            if (parsed.error) {
+              console.error('OpenRouter error:', parsed.error)
+              full += `\nError: ${parsed.error.message || 'Unknown error'}`
+              setStreamingContent(full)
+              continue
+            }
+
+            const delta = parsed.choices?.[0]?.delta?.content
+            if (delta) {
+              full += delta
+              setStreamingContent(full)
+            }
+          } catch (e) {
+            // skip malformed chunks
+          }
+        }
+      }
+
+      // Handle any remaining buffer
+      if (buffer.trim() && buffer.trim() !== 'data: [DONE]') {
+        try {
+          const data = buffer.trim().startsWith('data: ')
+            ? buffer.trim().slice(6)
+            : buffer.trim()
+          const parsed = JSON.parse(data)
+          const delta = parsed.choices?.[0]?.delta?.content
+          if (delta) {
             full += delta
             setStreamingContent(full)
-          } catch {}
-        }
+          }
+        } catch {}
       }
 
       // Save only user + assistant messages (not the injected search context)
