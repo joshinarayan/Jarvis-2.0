@@ -165,13 +165,15 @@ export function useChat() {
     setLastQuery('')
   }
 
-  return {
-    messages,
-    sendMessage,
-    isLoading,
-    streamingContent,
-    clearChat,
-    searchStatus,
-    lastQuery,
-  }
+ return {
+  messages,
+  setMessages,
+  sendMessage,
+  isLoading,
+  setIsLoading,
+  streamingContent,
+  clearChat,
+  searchStatus,
+  lastQuery,
+}
 }

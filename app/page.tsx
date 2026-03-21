@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useChat } from '@/hooks/useChat'
 import { useVoice } from '@/hooks/useVoice'
+import FileUpload from '@/components/FileUpload'
+import { useFileUpload } from '@/hooks/useFileUpload'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -78,7 +80,11 @@ function TypingIndicator() {
 }
 
 export default function Home() {
-  const { messages, sendMessage, isLoading, streamingContent, clearChat, searchStatus, lastQuery } = useChat()
+  const { 
+    messages, setMessages, sendMessage, 
+    isLoading, setIsLoading, streamingContent, 
+    clearChat, searchStatus, lastQuery 
+  } = useChat()
   const [input,      setInput]      = useState('')
   const [clock,      setClock]      = useState('')
   const [uptime,     setUptime]     = useState('00:00:00')
@@ -98,6 +104,11 @@ export default function Home() {
     onTranscript: handleTranscript,
     language: lang,
   })
+
+  const {
+    file, attachFile, analyzeFile,
+    clearFile, isAnalyzing, error: fileError,
+  } = useFileUpload()
 
   // Auto-speak JARVIS replies
   useEffect(() => {
@@ -122,8 +133,26 @@ export default function Home() {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   }, [messages, streamingContent, isLoading])
 
-  const handleSend = () => {
-    if (!input.trim() || isLoading) return
+  const handleSend = async () => {
+    if ((!input.trim() && !file) || isLoading) return
+
+    if (file) {
+      const userText = input.trim() || `Analyze this ${file.isImage ? 'image' : 'PDF'}`
+      const userMsg  = `[${file.isImage ? 'IMAGE' : 'PDF'}: ${file.name}] ${userText}`
+      setInput('')
+      setIsLoading(true)
+      setMessages(prev => [...prev, { role: 'user', content: userMsg }])
+
+      const result = await analyzeFile(userText)
+      clearFile()
+
+      if (result) {
+        setMessages(prev => [...prev, { role: 'assistant', content: result }])
+      }
+      setIsLoading(false)
+      return
+    }
+
     sendMessage(input.trim())
     setInput('')
   }
@@ -265,6 +294,13 @@ export default function Home() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               placeholder="SPEAK YOUR COMMAND, SIR..."
+            />
+            {/* File upload */}
+            <FileUpload
+              onFile={attachFile}
+              attached={file}
+              onClear={clearFile}
+              analyzing={isAnalyzing}
             />
             {/* Lang toggle */}
             <button onClick={() => setLang(l => l === 'en-US' ? 'hi-IN' : 'en-US')}
