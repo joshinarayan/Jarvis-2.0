@@ -18,6 +18,7 @@ export default function FileUpload({
 
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
+    e.stopPropagation()
     const f = e.dataTransfer.files[0]
     if (f) onFile(f)
   }
@@ -38,16 +39,13 @@ export default function FileUpload({
           onDrop={handleDrop}
           onDragOver={e => e.preventDefault()}
           onClick={() => inputRef.current?.click()}
-          className="border border-dashed cursor-pointer transition-all duration-200 px-3 py-2 flex items-center gap-2"
-          style={{
-            borderColor: 'var(--cyan-dim)',
-            background:  'transparent',
-          }}
-          whileHover={{ borderColor: 'var(--cyan)', background: 'rgba(0,212,255,0.04)' }}
+          className="border border-dashed cursor-pointer transition-all duration-200 px-3 py-2 flex items-center gap-2 flex-shrink-0"
+          style={{ borderColor: 'var(--cyan-dim)', background: 'transparent' }}
         >
           <span style={{ color: 'var(--cyan)', fontSize: 14 }}>📎</span>
-          <span className="text-[9px] tracking-[1px]" style={{ color: 'var(--text-muted)' }}>
-            DROP FILE · JPG PNG PDF
+          <span className="text-[9px] tracking-[1px] whitespace-nowrap"
+                style={{ color: 'var(--text-muted)' }}>
+            FILE
           </span>
           <input
             ref={inputRef}
@@ -57,53 +55,49 @@ export default function FileUpload({
             onChange={handleChange}
           />
         </motion.div>
+
       ) : (
         <motion.div
           key="attached"
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }}
-          className="flex items-center gap-2 px-3 py-2 border"
+          className="flex items-center gap-2 px-3 py-2 border flex-shrink-0"
           style={{
             borderColor: analyzing ? 'var(--amber)' : 'var(--cyan)',
             background:  'rgba(0,212,255,0.06)',
+            maxWidth:    '160px',
           }}
         >
-          {/* Preview thumbnail for images */}
-          {attached.isImage && (
-            <img
-              src={`data:${attached.mimeType};base64,${attached.base64}`}
-              alt="preview"
-              className="w-7 h-7 object-cover"
-              style={{ border: '1px solid var(--cyan-dim)' }}
-            />
-          )}
-          {!attached.isImage && (
-            <span style={{ color: 'var(--cyan)', fontSize: 14 }}>📄</span>
-          )}
+          <span style={{ color: 'var(--cyan)', fontSize: 14, flexShrink: 0 }}>
+            {attached.isImage ? '🖼' : '📄'}
+          </span>
 
-          <div className="flex-1 min-w-0">
-            <div className="text-[9px] truncate" style={{ color: 'var(--cyan)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="text-[9px]"
+                 style={{ color: 'var(--cyan)', overflow: 'hidden',
+                          textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80px' }}>
               {attached.name}
             </div>
             <div className="text-[8px]" style={{ color: 'var(--text-muted)' }}>
-              {attached.size} · {attached.isImage ? 'IMAGE' : 'PDF'}
+              {attached.size}
             </div>
           </div>
 
-          {analyzing && (
-            <span className="text-[8px] tracking-[1px]" style={{ color: 'var(--amber)',
+          {analyzing ? (
+            <span className="text-[8px]" style={{ color: 'var(--amber)', flexShrink: 0,
               animation: 'pulse-dot 1s ease-in-out infinite' }}>
-              SCANNING...
+              ...
             </span>
-          )}
-
-          {!analyzing && (
+          ) : (
             <button
               onClick={onClear}
-              className="text-[10px] hud-btn w-5 h-5"
-              style={{ color: 'var(--text-muted)', minWidth: 20 }}
-            >✕</button>
+              className="hud-btn flex-shrink-0"
+              style={{ width: 18, height: 18, minWidth: 18,
+                       fontSize: 10, color: 'var(--text-muted)' }}
+            >
+              ✕
+            </button>
           )}
         </motion.div>
       )}
