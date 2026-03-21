@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Message } from '@/lib/openrouter'
 import { webSearch, formatSearchContext } from '@/lib/searchTool'
 
@@ -26,11 +26,28 @@ function extractQuery(text: string): string {
 export type SearchStatus = 'idle' | 'searching' | 'done'
 
 export function useChat() {
-  const [messages,         setMessages]         = useState<Message[]>([])
+  const [messages,         setMessages]         = useState<Message[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const saved = localStorage.getItem('jarvis-chat-history')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
   const [isLoading,        setIsLoading]        = useState(false)
   const [streamingContent, setStreamingContent] = useState('')
   const [searchStatus,     setSearchStatus]     = useState<SearchStatus>('idle')
   const [lastQuery,        setLastQuery]        = useState('')
+
+  useEffect(() => {
+    if (messages.length === 0) return
+    try {
+      // Only keep last 100 messages so localStorage doesn't overflow
+      const trimmed = messages.slice(-100)
+      localStorage.setItem('jarvis-chat-history', JSON.stringify(trimmed))
+    } catch {}
+  }, [messages])
 
   const sendMessage = useCallback(async (content: string) => {
     const userMsg: Message = { role: 'user', content }
@@ -163,6 +180,7 @@ export function useChat() {
     setMessages([])
     setSearchStatus('idle')
     setLastQuery('')
+    localStorage.removeItem('jarvis-chat-history')
   }
 
  return {
