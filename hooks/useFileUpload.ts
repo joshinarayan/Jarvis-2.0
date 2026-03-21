@@ -22,7 +22,6 @@ export function useFileUpload() {
 
     setIsAnalyzing(true)
     setStreamResult('')
-    let full = ''
 
     try {
       const res = await fetch('/api/analyze', {
@@ -35,40 +34,19 @@ export function useFileUpload() {
         }),
       })
 
-      const reader  = res.body!.getReader()
-      const decoder = new TextDecoder()
-      let buffer    = ''
+      const data = await res.json()
+      const result = data.content || 'No response from vision model.'
+      setStreamResult(result)
+      return result
 
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed.startsWith('data: ')) continue
-          const data = trimmed.slice(6).trim()
-          if (data === '[DONE]' || data === '') continue
-          try {
-            const delta = JSON.parse(data).choices?.[0]?.delta?.content
-            if (delta) {
-              full += delta
-              setStreamResult(full)
-            }
-          } catch {}
-        }
-      }
     } catch (err) {
-      setError(String(err))
+      const msg = `Error analyzing file: ${String(err)}`
+      setError(msg)
+      return msg
     } finally {
       setIsAnalyzing(false)
       setStreamResult('')
     }
-
-    return full
   }, [file])
 
   const clearFile = useCallback(() => {
