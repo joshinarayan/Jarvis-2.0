@@ -128,6 +128,20 @@ export default function Home() {
     return () => clearInterval(id)
   }, [])
 
+  // Prevent browser from opening files when dropped outside dropzone
+  useEffect(() => {
+    const prevent = (e: globalThis.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    window.addEventListener('dragover',  prevent)
+    window.addEventListener('drop',      prevent)
+    return () => {
+      window.removeEventListener('dragover',  prevent)
+      window.removeEventListener('drop',      prevent)
+    }
+  }, [])
+
   // Auto-scroll
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
