@@ -6,8 +6,16 @@ export const runtime = 'edge'
 export async function POST(req: NextRequest) {
   try {
     const { messages }: { messages: Message[] } = await req.json()
-    const upstream = await streamChat(messages)
 
+    // Guard — no API key
+    if (!process.env.OPENROUTER_API_KEY) {
+      return Response.json(
+        { error: 'OPENROUTER_API_KEY not set in environment' },
+        { status: 500 }
+      )
+    }
+
+    const upstream = await streamChat(messages)
     return new Response(upstream.body, {
       headers: {
         'Content-Type': 'text/event-stream',
@@ -16,7 +24,10 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err) {
-    console.error(err)
-    return Response.json({ error: 'JARVIS offline' }, { status: 500 })
+    console.error('Chat route error:', err)
+    return Response.json(
+      { error: String(err) },
+      { status: 500 }
+    )
   }
 }

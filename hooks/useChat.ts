@@ -72,6 +72,14 @@ export function useChat() {
         body:    JSON.stringify({ messages: history }),
       })
 
+      if (!res.ok) {
+        const err = await res.json()
+        console.error('API error:', err)
+        setStreamingContent(`JARVIS OFFLINE: ${err.error || res.status}`)
+        setIsLoading(false)
+        return
+      }
+
       const reader  = res.body!.getReader()
       const decoder = new TextDecoder()
       let full = ''

@@ -206,7 +206,7 @@ export default function Home() {
             <ChatMessage
               role="jarvis"
               content="Good morning, Sir. All systems are nominal. I am running on Llama 3.3 70B via OpenRouter. How may I assist you today?"
-              time={clock}
+              time={clock || '--:--:--'}
             />
             {messages.map((m, i) => (
               <ChatMessage key={i} role={m.role} content={m.content} time={clock}/>
