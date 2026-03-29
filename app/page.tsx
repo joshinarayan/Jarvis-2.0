@@ -349,6 +349,17 @@ export default function Home() {
         <footer className="flex items-center justify-between border-t px-1"
                 style={{ gridArea:'bot', borderColor:'var(--border)' }}>
           <div className="flex gap-5">
+            {typeof window !== 'undefined' && !('__TAURI__' in window) && (
+  <a
+    href="https://github.com/joshinarayan/Jarvis-2.0/releases"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-[8px] tracking-[1.5px] hover:opacity-80"
+    style={{ color:'var(--cyan)', textDecoration:'none' }}
+  >
+    [ DOWNLOAD APP ]
+  </a>
+)}
             {(['CLEAR', 'STOP'] as const).map(label => (
               <button key={label}
                       onClick={label === 'CLEAR' ? clearChat : stopSpeaking}
