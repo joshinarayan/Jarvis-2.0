@@ -7,6 +7,7 @@ import { useVoice } from '@/hooks/useVoice'
 import FileUpload from '@/components/FileUpload'
 import { useFileUpload } from '@/hooks/useFileUpload'
 
+// ── Helpers & sub-components OUTSIDE Home() ──────────────
 const pad = (n: number) => String(n).padStart(2, '0')
 
 function ArcReactor() {
@@ -28,7 +29,7 @@ function ArcReactor() {
           <circle cx="72" cy="50" r="2" fill="#00d4ff" opacity={0.6}/>
         </g>
         <circle cx="50" cy="50" r="10" fill="rgba(0,212,255,0.15)" stroke="#00d4ff" strokeWidth="1"/>
-        <circle cx="50" cy="50" r="5"  fill="#00d4ff" opacity={0.9}/>
+        <circle cx="50" cy="50" r="5" fill="#00d4ff" opacity={0.9}/>
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="font-orbitron text-[18px] font-bold glow">98%</span>
@@ -51,7 +52,7 @@ function ChatMessage({ role, content, time }: { role: string; content: string; t
            style={{ borderColor: 'var(--cyan-dim)', color: 'var(--text-muted)' }}>
         {isUser ? 'S' : 'J'}
       </div>
-      <div className={`max-w-[85%] px-3 py-2 panel text-[11px] leading-relaxed`}
+      <div className="max-w-[85%] px-3 py-2 panel text-[11px] leading-relaxed"
            style={{ background: isUser ? 'rgba(0,212,255,0.08)' : 'rgba(0,212,255,0.04)' }}>
         <div className="text-[8px] tracking-[2px] mb-1" style={{ color: 'var(--text-muted)' }}>
           {isUser ? 'SIR' : 'JARVIS'} · {time}
@@ -79,16 +80,17 @@ function TypingIndicator() {
   )
 }
 
+// ── Main component ────────────────────────────────────────
 export default function Home() {
-  const { 
-    messages, setMessages, sendMessage, 
-    isLoading, setIsLoading, streamingContent, 
-    clearChat, searchStatus, lastQuery 
+  const {
+    messages, setMessages, sendMessage,
+    isLoading, setIsLoading, streamingContent,
+    clearChat, searchStatus, lastQuery
   } = useChat()
-  const [input,      setInput]      = useState('')
-  const [clock,      setClock]      = useState('')
-  const [uptime,     setUptime]     = useState('00:00:00')
-  const [lang,       setLang]       = useState<'en-US' | 'hi-IN'>('en-US')
+  const [input,  setInput]  = useState('')
+  const [clock,  setClock]  = useState('')
+  const [uptime, setUptime] = useState('00:00:00')
+  const [lang,   setLang]   = useState<'en-US' | 'hi-IN'>('en-US')
   const chatRef  = useRef<HTMLDivElement>(null)
   const startRef = useRef(Date.now())
 
@@ -99,21 +101,28 @@ export default function Home() {
     sendMessage(text)
   }, [sendMessage])
 
-  const { isListening, isSpeaking, isSupported, startListening, stopListening,
-          speak, stopSpeaking, transcript, error: voiceError } = useVoice({
-    onTranscript: handleTranscript,
-    language: lang,
-  })
+  const {
+    isListening, isSpeaking, isSupported,
+    startListening, stopListening,
+    speak, stopSpeaking, transcript, error: voiceError
+  } = useVoice({ onTranscript: handleTranscript, language: lang })
 
   const {
     file, attachFile, analyzeFile,
-    clearFile, isAnalyzing, error: fileError,
+    clearFile, isAnalyzing,
   } = useFileUpload()
+
+  // Auth guard
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const session = sessionStorage.getItem('jarvis-session')
+    if (!session) window.location.href = '/login'
+  }, [])
 
   // Auto-speak JARVIS replies
   useEffect(() => {
-  if (latestReply && !isLoading) speak(latestReply)
-}, [latestReply, isLoading, speak])
+    if (latestReply && !isLoading) speak(latestReply)
+  }, [latestReply, isLoading, speak])
 
   // Clock
   useEffect(() => {
@@ -128,17 +137,14 @@ export default function Home() {
     return () => clearInterval(id)
   }, [])
 
-  // Prevent browser from opening files when dropped outside dropzone
+  // Prevent browser opening dropped files
   useEffect(() => {
-    const prevent = (e: globalThis.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    window.addEventListener('dragover',  prevent)
-    window.addEventListener('drop',      prevent)
+    const prevent = (e: globalThis.DragEvent) => { e.preventDefault(); e.stopPropagation() }
+    window.addEventListener('dragover', prevent)
+    window.addEventListener('drop',     prevent)
     return () => {
-      window.removeEventListener('dragover',  prevent)
-      window.removeEventListener('drop',      prevent)
+      window.removeEventListener('dragover', prevent)
+      window.removeEventListener('drop',     prevent)
     }
   }, [])
 
@@ -156,13 +162,9 @@ export default function Home() {
       setInput('')
       setIsLoading(true)
       setMessages(prev => [...prev, { role: 'user', content: userMsg }])
-
       const result = await analyzeFile(userText)
       clearFile()
-
-      if (result) {
-        setMessages(prev => [...prev, { role: 'assistant', content: result }])
-      }
+      if (result) setMessages(prev => [...prev, { role: 'assistant', content: result }])
       setIsLoading(false)
       return
     }
@@ -171,16 +173,13 @@ export default function Home() {
     setInput('')
   }
 
-  const now = new Date()
-  const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
-
   return (
     <div className="hud-grid scanlines relative h-screen overflow-hidden"
          style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,58,92,0.3), transparent), var(--bg-deep)' }}>
       <div className="relative z-10 h-full grid gap-2 p-2"
            style={{ gridTemplate: '"top top top" 52px "left main right" 1fr "bot bot bot" 44px / 220px 1fr 200px' }}>
 
-        {/* ── TOP BAR ── */}
+        {/* TOP BAR */}
         <header className="flex items-center justify-between border-b px-1"
                 style={{ gridArea:'top', borderColor:'var(--border)' }}>
           <div>
@@ -192,19 +191,20 @@ export default function Home() {
           <div className="flex items-center gap-5 text-[10px]">
             <span className="flex items-center gap-2">
               <span className="w-[6px] h-[6px] rounded-full"
-                    style={{ background:'var(--cyan)', boxShadow:'0 0 8px var(--cyan)', animation:'pulse-dot 2s ease-in-out infinite' }}/>
+                    style={{ background:'var(--cyan)', boxShadow:'0 0 8px var(--cyan)',
+                             animation:'pulse-dot 2s ease-in-out infinite' }}/>
               <span style={{ color:'var(--text-muted)' }}>ONLINE</span>
             </span>
             <span style={{ color:'var(--text-muted)' }}>
               UPTIME <span className="font-orbitron text-[9px]" style={{ color:'var(--cyan)' }}>{uptime}</span>
             </span>
             <span style={{ color:'var(--text-muted)' }}>
-              MODEL <span style={{ color:'var(--cyan)' }}>LLAMA-3.3-70B</span>
+              MODEL <span style={{ color:'var(--cyan)' }}>OPENROUTER FREE</span>
             </span>
           </div>
         </header>
 
-        {/* ── LEFT SIDEBAR ── */}
+        {/* LEFT SIDEBAR */}
         <aside className="flex flex-col gap-2" style={{ gridArea:'left' }}>
           <div className="panel p-3 flex-shrink-0">
             <p className="text-[8px] tracking-[3px] mb-3" style={{ color:'var(--text-muted)' }}>Arc Reactor</p>
@@ -216,16 +216,17 @@ export default function Home() {
                     <span style={{ color:'var(--text-muted)' }}>{k}</span>
                     <span style={{ color:'var(--cyan)' }}>{k === 'LATENCY' ? '142ms' : `${v}%`}</span>
                   </div>
-                  <div className="hud-bar-track"><div className="hud-bar-fill" style={{ width:`${v}%` }}/></div>
+                  <div className="hud-bar-track">
+                    <div className="hud-bar-fill" style={{ width:`${v}%` }}/>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-
           <div className="panel p-3 flex-1">
             <p className="text-[8px] tracking-[3px] mb-2" style={{ color:'var(--text-muted)' }}>Active Tools</p>
             <div className="flex flex-wrap gap-1">
-              {([['VOICE', isSupported], ['SEARCH', true], ['FILES', false], ['FACE-ID', false]] as const).map(([label, on]) => (
+              {([['VOICE', isSupported], ['SEARCH', true], ['FILES', true], ['FACE-ID', false]] as const).map(([label, on]) => (
                 <span key={label} className="text-[8px] tracking-[1px] px-2 py-1 border"
                       style={{
                         borderColor: on ? 'var(--cyan)' : 'var(--cyan-dim)',
@@ -239,16 +240,15 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* ── MAIN CHAT ── */}
+        {/* MAIN CHAT */}
         <main className="panel p-3 flex flex-col gap-2" style={{ gridArea:'main' }}>
           <p className="text-[8px] tracking-[3px] flex-shrink-0" style={{ color:'var(--text-muted)' }}>
             Primary Interface
           </p>
-
           <div ref={chatRef} className="flex-1 overflow-y-auto space-y-3 pr-1">
             <ChatMessage
               role="jarvis"
-              content="Good morning, Sir. All systems are nominal. I am running on Llama 3.3 70B via OpenRouter. How may I assist you today?"
+              content="Good morning, Sir. All systems are nominal. How may I assist you today?"
               time={clock || '--:--:--'}
             />
             {messages.map((m, i) => (
@@ -260,36 +260,22 @@ export default function Home() {
             {isLoading && !streamingContent && <TypingIndicator/>}
           </div>
 
-          {/* Search status indicator */}
           <AnimatePresence>
             {searchStatus === 'searching' && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-[9px] tracking-[1px] px-2 py-1 border-l-2 flex items-center gap-2"
-                style={{ borderColor: 'var(--amber)', color: 'var(--amber)' }}
-              >
-                <span style={{ animation: 'pulse-dot 1s ease-in-out infinite' }}>◉</span>
+              <motion.div initial={{ opacity:0, y:4 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
+                          className="text-[9px] tracking-[1px] px-2 py-1 border-l-2 flex items-center gap-2"
+                          style={{ borderColor:'var(--amber)', color:'var(--amber)' }}>
+                <span style={{ animation:'pulse-dot 1s ease-in-out infinite' }}>◉</span>
                 SEARCHING · {lastQuery}
               </motion.div>
             )}
             {searchStatus === 'done' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="text-[9px] tracking-[1px] px-2 py-1 border-l-2"
-                style={{ borderColor: 'var(--cyan)', color: 'var(--text-muted)' }}
-              >
+              <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+                          className="text-[9px] tracking-[1px] px-2 py-1 border-l-2"
+                          style={{ borderColor:'var(--cyan)', color:'var(--text-muted)' }}>
                 ✓ WEB RESULTS INJECTED
               </motion.div>
             )}
-          </AnimatePresence>
-
-          {/* Voice transcript preview */}
-          <AnimatePresence>
             {(transcript || voiceError) && (
               <motion.div initial={{ opacity:0, y:4 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
                           className="text-[9px] tracking-[1px] px-2 py-1 border-l-2"
@@ -300,7 +286,6 @@ export default function Home() {
             )}
           </AnimatePresence>
 
-          {/* Input row */}
           <div className="flex gap-2 flex-shrink-0">
             <input
               className="hud-input flex-1"
@@ -309,43 +294,29 @@ export default function Home() {
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               placeholder="SPEAK YOUR COMMAND, SIR..."
             />
-            {/* File upload */}
-            <FileUpload
-              onFile={attachFile}
-              attached={file}
-              onClear={clearFile}
-              analyzing={isAnalyzing}
-            />
-            {/* Lang toggle */}
+            <FileUpload onFile={attachFile} attached={file} onClear={clearFile} analyzing={isAnalyzing}/>
             <button onClick={() => setLang(l => l === 'en-US' ? 'hi-IN' : 'en-US')}
-                    className="hud-btn text-[8px] tracking-[1px] px-2"
-                    title="Toggle Hindi/English">
+                    className="hud-btn text-[8px] tracking-[1px] px-2">
               {lang === 'en-US' ? 'EN' : 'HI'}
             </button>
-            {/* Mic */}
             {isSupported && (
               <button onClick={isListening ? stopListening : startListening}
-                      className={`hud-btn w-9 h-9 text-sm relative ${isListening ? 'active' : ''}`}
-                      style={isListening ? { animation:'mic-pulse 1s ease-in-out infinite' } : {}}
-                      title={isListening ? 'Stop listening' : 'Start voice'}>
+                      className={`hud-btn w-9 h-9 text-sm ${isListening ? 'active' : ''}`}
+                      style={isListening ? { animation:'mic-pulse 1s ease-in-out infinite' } : {}}>
                 {isListening ? '⏹' : '🎤'}
               </button>
             )}
-            {/* Stop speaking */}
             {isSpeaking && (
               <button onClick={stopSpeaking} className="hud-btn w-9 h-9 text-sm"
-                      title="Stop JARVIS speaking" style={{ color:'var(--amber)', borderColor:'var(--amber)' }}>
+                      style={{ color:'var(--amber)', borderColor:'var(--amber)' }}>
                 🔇
               </button>
             )}
-            {/* Send */}
-            <button onClick={handleSend} disabled={isLoading} className="hud-btn w-9 h-9 text-sm">
-              ↑
-            </button>
+            <button onClick={handleSend} disabled={isLoading} className="hud-btn w-9 h-9 text-sm">↑</button>
           </div>
         </main>
 
-        {/* ── RIGHT SIDEBAR ── */}
+        {/* RIGHT SIDEBAR */}
         <aside className="flex flex-col gap-2" style={{ gridArea:'right' }}>
           <div className="panel p-3 flex-shrink-0">
             <p className="text-[8px] tracking-[3px] mb-2" style={{ color:'var(--text-muted)' }}>
@@ -362,7 +333,6 @@ export default function Home() {
               </div>
             ))}
           </div>
-
           <div className="panel p-3 flex-1 overflow-hidden">
             <p className="text-[8px] tracking-[3px] mb-2" style={{ color:'var(--text-muted)' }}>System Log</p>
             <div className="text-[8px] leading-loose tracking-wide space-y-0.5" style={{ color:'var(--text-muted)' }}>
@@ -375,20 +345,18 @@ export default function Home() {
           </div>
         </aside>
 
-        {/* ── BOTTOM BAR ── */}
+        {/* BOTTOM BAR */}
         <footer className="flex items-center justify-between border-t px-1"
                 style={{ gridArea:'bot', borderColor:'var(--border)' }}>
           <div className="flex gap-5">
-            {(['CLEAR', 'STOP'] as const).map((label) => (
-  <button
-    key={label}
-    onClick={label === 'CLEAR' ? clearChat : stopSpeaking}
-    className="text-[8px] tracking-[1.5px] transition-colors hover:opacity-80"
-    style={{ color:'var(--text-muted)', background:'none', border:'none', cursor:'pointer' }}
-  >
-    [ {label} ]
-  </button>
-))}
+            {(['CLEAR', 'STOP'] as const).map(label => (
+              <button key={label}
+                      onClick={label === 'CLEAR' ? clearChat : stopSpeaking}
+                      className="text-[8px] tracking-[1.5px] transition-colors hover:opacity-80"
+                      style={{ color:'var(--text-muted)', background:'none', border:'none', cursor:'pointer' }}>
+                [ {label} ]
+              </button>
+            ))}
           </div>
           <span className="font-orbitron text-[10px] tracking-[2px]" style={{ color:'var(--text-muted)' }}>
             {clock}

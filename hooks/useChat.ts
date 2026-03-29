@@ -1,3 +1,4 @@
+'use client'
 import { useState, useCallback, useEffect } from 'react'
 import { Message } from '@/lib/openrouter'
 import { webSearch, formatSearchContext } from '@/lib/searchTool'
